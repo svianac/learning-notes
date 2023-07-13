@@ -46,6 +46,8 @@
     - [Timing and thresholds](#timing-and-thresholds)
   - [Adding healthchecks to an app](#adding-healthchecks-to-an-app)
   - [Managing configuration for our APP](#managing-configuration-for-our-app)
+  - [Create a ConfigMap for the app haproxy (file)](#create-a-configmap-for-the-app-haproxy-file)
+  - [Create a ConfigMap for the app docker registry (as env)](#create-a-configmap-for-the-app-docker-registry-as-env)
 
 
 ## Multipass
@@ -620,3 +622,40 @@ Example:
   kubectl create configmap my-app-config --from-file=app.conf=app-prod.conf
   \# Create a ConfigMap with multiple keys (one per file in the config.d directory)
   kubectl create configmap my-app-config --from-file=config.d/ </code>
+
+## Create a ConfigMap for the app haproxy (file)
+
+We will use official haproxy and it expects a configuration file at /usr/local/etc/haproxy/haproxy.cfg. 
+This app listens on port 80 and load balances connections between IBM and Google. 
+
+<code>  # We get the file
+curl https://k8smastery.com/haproxy.cfg -o haproxy.cfg
+\#  Now we create the configMap
+kubectl create configmap haproxy --from-file=haproxy.cfg
+\#  We can check the configMap
+kubectl get configmap/haproxy -o yaml</code>
+
+In order to use it, we need to create a volume for the configMap and define the volumeMount in the pod. 
+
+<code>kubectl apply -f https://k8smastery.com/haproxy.yaml</code>
+
+Now we test it from shpod pod:
+
+<code>kubectl exec -ti shpod -n shpod -- bash
+kubectl get pods -n default -o wide
+curl 10.1.254.88</code>
+
+## Create a ConfigMap for the app docker registry (as env)
+
+<code>kubectl create configmap registry --from-literal=http.addr=0.0.0.0:80
+kubectl get configmap/registry -o yaml</code>
+
+The yaml manifest of the pod will use the env parameter.
+
+<code>kubectl apply -f https://k8smastery.com/registry.yaml</code>
+
+Now we test it from shpod pod:
+
+<code>kubectl exec -ti shpod -n shpod -- bash
+kubectl get pods -n default -o wide
+curl 10.1.254.85/v2/_catalog</code>
