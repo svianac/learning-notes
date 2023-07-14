@@ -48,9 +48,6 @@
   - [Managing configuration for our APP](#managing-configuration-for-our-app)
   - [Create a ConfigMap for the app haproxy (file)](#create-a-configmap-for-the-app-haproxy-file)
   - [Create a ConfigMap for the app docker registry (as env)](#create-a-configmap-for-the-app-docker-registry-as-env)
-  - [Ingress](#ingress)
-    - [Principle of operation](#principle-of-operation)
-      - [Install NGINX Ingress controller](#install-nginx-ingress-controller)
       - [DNS using nip.io](#dns-using-nipio)
       - [Creation of Ingress in k8s](#creation-of-ingress-in-k8s)
 
@@ -63,22 +60,28 @@ Install microk8s in multipass mode: https://microk8s.io/docs/install-multipass
 ## Get and describe
 Check composition of the cluster
 
-<code>kubectl get node (no/no/nodes is equivalent)</code> 
+```yaml
+kubectl get node (no/no/nodes is equivalent)
+``` 
 
 More info:
 
-<code>kubectl get nodes -o wide
+```yaml
+kubectl get nodes -o wide
 kubectl get nodes -o yaml
 kubectl get nodes -o json | jq ".items[] | {name:.metada.name} + .status.capacity"
-kubectl describe node microk8s-vm</code>
+kubectl describe node microk8s-vm
+```
 
 ## Explain
 Exploring types and definitions
 
-<code>kubectl api-resources # perform instrospection and what kind of objects the api offers
+```yaml
+kubectl api-resources # perform instrospection and what kind of objects the api offers
 kubectl explain type // kubectl explain node
 kubectl explain node.spec
-kubectl explain node --recursive</code>
+kubectl explain node --recursive
+```
 
 ## Definitions service, pod, namespace
 - service: It is a stable endpoint to connect to "something".
@@ -87,18 +90,23 @@ kubectl explain node --recursive</code>
 
 ## get and namespace
 
-<code>kubectl get namespaces / ns
+```yaml
+kubectl get namespaces / ns
 kubectl get pods --all-namespaces
 kubectl get pods --all-namespaces -o wide
 kubectl get pods -n kube-system
-kubectl get configmaps -n kube-public</code>
+kubectl get configmaps -n kube-public
+```
 
-<code>kubectl delete all --all</code>
+```yaml
+kubectl delete all --all
+```
 
 ## Using log command
 Deployment creates the replicaset, the replicaset creates the pod. The pod creates/run the container. 
 
-<code>kubectl run pingping --image alpine ping 1.1.1.1
+```yaml
+kubectl run pingping --image alpine ping 1.1.1.1
 kubectl create cronjob every3mins --image alpine --schedule="*/3 * * * *" --restart=OnFailure -- sleep 10
 kubectl create deployment ticktock --image="bretfisher/clock"
 kubectl scale deploy/pingping --replicas 3
@@ -108,15 +116,18 @@ kubectl logs pingping --tail 1
 kubectl logs pingping --tail 1 --follow
 kubectl logs -l run=pingping --tail 1 -f
 kubectl logs --selector=app=ticktock --tail 1 / to list selectors k describe rs
-kubectl get cronjobs</code>
+kubectl get cronjobs
+```
 
 ## Logs with Stern
 Stern: Tail multiple pods and containers from kubernetes. 
 https://kubernetes.io/blog/2016/10/tail-kubernetes-with-stern/
 https://github.com/stern/stern
 
-<code>stern web -c nginx
-stern auth -t --since 15m</code>
+```yaml
+stern web -c nginx
+stern auth -t --since 15m
+```
 
 ## Type of services
 Services are layer 4. IP+protocol+port.
@@ -131,36 +142,44 @@ https://kubernetes.io/docs/concepts/services-networking/service/
 
 ## Deploy an HTTP server with ClusterIP
 
-<code>kubectl create deployment httpenv --image="bretfisher/httpenv"
+```yaml
+kubectl create deployment httpenv --image="bretfisher/httpenv"
 kubectl scale deployment httpenv --replicas 10
 kubectl expose deployment httpenv --port 8888 #8888 is where pod is listening internally
-k get service</code>
+k get service
+```
 
 ## Testing HTTP 
 
-<code>kubectl apply -f https://bret.run/shpod.yml
+```yaml
+kubectl apply -f https://bret.run/shpod.yml
 kubectl attach -n shpod -ti shpod
 kubectl config set-context --current --namespace=shpod
 kubectl get svc httpenv -o go-template --template '{{ .spec.clusterIP}}'
 IP=($kubectl get svc httpenv -o go-template --template '{{ .spec.clusterIP}}')
-curl 10.152.183.225:8888 | jq .HOSTNAME</code>
+curl 10.152.183.225:8888 | jq .HOSTNAME
+```
 
 Headless service: service that does not have an IP. 
 
 ## Endpoint details
 
-<code>kubectl get endpoints
+```yaml
+kubectl get endpoints
 kubectl get endpoints httpenv -o yaml
-kubectl get pods -l app=httpenv -o wide</code>
+kubectl get pods -l app=httpenv -o wide
+```
 
 ## Deployment with Services (Assignment)
 
-<code>kubectl create deployment littletomcat --image=tomcat
+```yaml
+kubectl create deployment littletomcat --image=tomcat
 kubectl get pod littletomcat-845ffd77d5-tpgnp -o go-template --template '{{ .status.podIP}}' #get IP of the pod
 kubectl scale deploy littletomcat --replicas 2 
 kubectl exec -ti littletomcat-845ffd77d5-rnlzm -- ping 10.1.254.124
 kubectl delete deploy littletomcat
-kubectl expose deployment littletomcat --port=8080</code>
+kubectl expose deployment littletomcat --port=8080
+```
 
 ## DockerCoin miner
 Generate a few random bytes, hash these bytes, increment a counter and repeats forever. 
@@ -174,52 +193,70 @@ Generate a few random bytes, hash these bytes, increment a counter and repeats f
 How it works: Worker will log HTTP requests to rng and hasher. Rng and hasher will log incoming HTTP requests. Webui will give us a graph on coins mined per second. 
 
 ## Create DockerCoin miner
-<code>kubectl create deployment redis --image=redis
+```yaml
+kubectl create deployment redis --image=redis
 kubectl create deployment hasher --image=dockercoins/hasher:v0.1
 kubectl create deployment rng --image=dockercoins/rng:v0.1
 kubectl create deployment webui --image=dockercoins/webui:v0.1
-kubectl create deployment worker --image=dockercoins/worker:v0.1</code>
+kubectl create deployment worker --image=dockercoins/worker:v0.1
+```
 
-<code>kubectl expose deployment redis --port 6379
+```yaml
+kubectl expose deployment redis --port 6379
 kubectl expose deployment rng --port 80
-kubectl expose deployment hasher --port 80</code>
+kubectl expose deployment hasher --port 80
+```
 
 The webui will be exposed using NodePort
 
-<code>kubectl expose deployment webui --type=NodePort --port=80
+```yaml
+kubectl expose deployment webui --type=NodePort --port=80
 kubectl get services
-kubectl scale deployment worker --replicas=5</code>
+kubectl scale deployment worker --replicas=5
+```
 
 ## Create Wordsmith (Assignment)
-<code>kubectl create deployment web --image=bretfisher/wordsmith-web
+```yaml
+kubectl create deployment web --image=bretfisher/wordsmith-web
 kubectl create deployment api --image=bretfisher/wordsmith-api
-kubectl create deployment db --image=bretfisher/wordsmith-db</code>
+kubectl create deployment db --image=bretfisher/wordsmith-db
+```
 
-<code>kubectl expose deployment web --type=NodePort --port 80
+```yaml
+kubectl expose deployment web --type=NodePort --port 80
 kubectl expose deployment api --port 8080
-kubectl expose deployment db --port 5432</code>
+kubectl expose deployment db --port 5432
+```
 
-<code>kubectl scale deployment api --replicas=5</code>
+```yaml
+kubectl scale deployment api --replicas=5
+```
 
 ## Port forwarding
 kubectl port-forward <\pod-name> <\locahost-port>:<\pod-port>
   
-<code>kubectl port-forward webui-6969bf568c-5x5n8 8080:80</code>
+```yaml
+kubectl port-forward webui-6969bf568c-5x5n8 8080:80
+```
 
 The above command forwards to localhost 8080 from pod 80
 
 ## Kubernetes dashboard
 
-<code>kubectl apply -f https://k8smastery.com/insecure-dashboard.yaml
-kubectl port-forward dashboard-6778b765cd-44vr6 8080:80</code>
+```yaml
+kubectl apply -f https://k8smastery.com/insecure-dashboard.yaml
+kubectl port-forward dashboard-6778b765cd-44vr6 8080:80
+```
 
 ## Daemon sets
 
 We can use it to distribute the containers evenly among nodes. We can use label and selectors to filter to what nodes applies. 
 We can't create them using CLI. Only apply command. 
-<code>kubectl get deploy/rng -o yaml > rng.yaml
+```yaml
+kubectl get deploy/rng -o yaml > rng.yaml
 kubectl apply -f rng.yaml #It will fail
-kubectl apply -f rng.yaml --validate=false #Remove validation</code>
+kubectl apply -f rng.yaml --validate=false #Remove validation
+```
 
 Daemon creates one pod per node. Master nodes usually have tains to prevent pods running there.
 
@@ -231,14 +268,18 @@ A daemon set is resource that creates more resources (pods).
 
 The rng service is load balancing requests to a set of pods. That set of pods is defined by the selector of the rng service. 
 
-<code>kubectl describe service rng
-Selector:          app=rng</code>
+```yaml
+kubectl describe service rng
+Selector:          app=rng
+```
 
 If any pod contains this, it will be part of the set of pods. Service is always looking for pods that follows the app=rng approach.
 
-<code>kubectl get pods -l app=rng
+```yaml
+kubectl get pods -l app=rng
 kubectl get all -l app=rng
-kubectl describe pod rng-5bd86c8566-m4j8s | grep Label</code>
+kubectl describe pod rng-5bd86c8566-m4j8s | grep Label
+```
 
 app=rng will be in the Deployment, Replicaset and the pod. 
 
@@ -248,40 +289,56 @@ The multiple labels in the selector are treated as AND condition, so they all la
 
 First we label all the pods.
 
-<code>kubectl label pods -l app=rng enabled=yes</code>
+```yaml
+kubectl label pods -l app=rng enabled=yes
+```
 
 Second we edit the service that manages the traffic. We add a new entry .Spec.selector.enabled = "yes"
 
-<code>kubectl edit svc rng</code>
+```yaml
+kubectl edit svc rng
+```
 
 Finally, we edit one of the pods to remove the label. So the service will not forward traffic. 
 
-<code>kubectl label pod -l app=rng,pod-template-hash enabled-</code>
+```yaml
+kubectl label pod -l app=rng,pod-template-hash enabled-
+```
 
 The minus at the end of enabled removes the label. 
 
 ## Load balancing between nginx and apache (Assignment)
 First we create both deployments
 
-<code>kubectl create deployment nginx --image="nginx"
-kubectl create deployment apache --image="httpd"</code>
+```yaml
+kubectl create deployment nginx --image="nginx"
+kubectl create deployment apache --image="httpd"
+```
 
 Then we expose ports.
 
-<code>kubectl expose deployment nginx --port 80
-kubectl expose deployment apache --port 80</code>
+```yaml
+kubectl expose deployment nginx --port 80
+kubectl expose deployment apache --port 80
+```
 
 Now we edit the service and add a new label (traffic will stop). 
 
-<code>kubectl edit svc nginx #and add .Spec.selector.myapp=web and remove the original one</code>
+```yaml
+kubectl edit svc nginx #and add .Spec.selector.myapp=web and remove the original one
+```
 
 Now we add to the deployment the correct label in the template section.
     
-<code>kubectl edit deploy nginx #and add .Spec.template.labels.myapp=web</code>
+```yaml
+kubectl edit deploy nginx #and add .Spec.template.labels.myapp=web
+```
 
 We also add to the apache deployments defition. 
 
-<code>kubectl edit deploy apache #and add .Spec.template.labels.myapp=web</code>
+```yaml
+kubectl edit deploy apache #and add .Spec.template.labels.myapp=web
+```
 
 At this point, when we use curl, sometimes apache replies and other times nginx. 
 
@@ -289,12 +346,16 @@ At this point, when we use curl, sometimes apache replies and other times nginx.
 
 CLI has more limitations than YAML. We can create YAML manifests from an existing objec using:
 
-<code>kubectl get kind name -o yaml</code>
+```yaml
+kubectl get kind name -o yaml
+```
 
 We can also use the create command in next way to get the YAML manifest:
 
-<code>kubectl create deployment web --image nginx -o yaml --dry-run
-kubectl create namespace  awesome-app  -o yaml --dry-run</code>
+```yaml
+kubectl create deployment web --image nginx -o yaml --dry-run
+kubectl create namespace  awesome-app  -o yaml --dry-run
+```
 
 We can clean up empty dicts. 
 
@@ -303,13 +364,15 @@ We can clean up empty dicts.
 To be able to create a manifest offline. 
 We need:
 
-<code>apiVersion:   # find with "kubectl api-versions"
+```yaml
+apiVersion:   # find with "kubectl api-versions"
 kind:               # find with "kubectl api-resources"
 metadata:
 spec:               #find with "kubectl describe pod"
                     #kubectl explain Pod --recursive
                     kubectl explain Pod.spec
-                    kubectl explain Pod.spec --recursive</code>
+                    kubectl explain Pod.spec --recursive
+```
 
 ### YAML: Tips and validations
 
@@ -331,17 +394,23 @@ https://github.com/instrumenta/kubeval
 
 We genrate a YAML deployment.
 
-<code>kubectl create deployment web --image nginx -o yaml > web.yaml</code>
+```yaml
+kubectl create deployment web --image nginx -o yaml > web.yaml
+```
 
 Change kind in the YAML to make it a DaemonSet and we see what would be applied:
 
-<code>kubectl apply -f web.yaml --dry-run --validate=false -o yaml</code>
+```yaml
+kubectl apply -f web.yaml --dry-run --validate=false -o yaml
+```
 
 The output YAML is not a valid DaemonSet (replica field is present for example)
 
 But if we use --server-dry-run, we will see what really kubernetes is going to save in its DB and the real manifest. 
 
-<code>kubectl apply -f web.yaml --dry-run=server --validate=false -o yaml</code>
+```yaml
+kubectl apply -f web.yaml --dry-run=server --validate=false -o yaml
+```
 
 This outout has been verified much more extensively. It should be used rather than regular --dry-run. 
 
@@ -349,15 +418,20 @@ This outout has been verified much more extensively. It should be used rather th
 
 We can use kubectl diff to compare an already created resource with a YAML manifest that implements it. For example,
 
-<code>kubectl apply -f just-a-pod.yaml</code>
+```yaml
+kubectl apply -f just-a-pod.yaml
+```
 
 Now we edit the image tag to :1.17 in the file just-a-pod.yaml and we use diff the spot any differences:
 
-<code>kubectl diff -f just-a-pod.yaml</code>
+```yaml
+kubectl diff -f just-a-pod.yaml
+```
 
 We can see next output:
 
-<code>diff -u -N /tmp/LIVE-510768210/v1.Pod.default.hello /tmp/MERGED-583742770/v1.Pod.default.hello
+```yaml
+diff -u -N /tmp/LIVE-510768210/v1.Pod.default.hello /tmp/MERGED-583742770/v1.Pod.default.hello
 --- /tmp/LIVE-510768210/v1.Pod.default.hello	2023-07-06 20:51:12.474104014 +0200
 +++ /tmp/MERGED-583742770/v1.Pod.default.hello	2023-07-06 20:51:12.474104014 +0200
 @@ -14,7 +14,7 @@
@@ -369,7 +443,8 @@ We can see next output:
      imagePullPolicy: Always
      name: hello
      resources: {}
-</code>
+
+```
 
 It helps to be sure of the things we change. 
 
@@ -392,11 +467,14 @@ We have the possibility of rolling back if something goes wrong.
 
 ### Update Walkthroughs
 
-<code>kubectl apply -f https://k8smastery.com/dockercoins.yaml</code>
+```yaml
+kubectl apply -f https://k8smastery.com/dockercoins.yaml
+```
 
 We check the rolling update data. This deployment has 10 instances.
 
-<code>kubectl get deploy -o json | jq ".items[] | {name:.metadata.name} + .spec.strategy.rollingUpdate"
+```yaml
+kubectl get deploy -o json | jq ".items[] | {name:.metadata.name} + .spec.strategy.rollingUpdate"
 kubectl get deploy deployment-name -o json | jq "{name:.metadata.name} + .spec.strategy"
 {
   "name": "worker",
@@ -404,21 +482,28 @@ kubectl get deploy deployment-name -o json | jq "{name:.metadata.name} + .spec.s
   "maxUnavailable": "25%"
 }
 
-</code>
+
+```
 
 Now we update the deployment worker
 
-<code>kubectl set image deploy worker worker=dockercoins/worker:v0.2</code>
+```yaml
+kubectl set image deploy worker worker=dockercoins/worker:v0.2
+```
 
 We can check the status of the rollour by:
 
-<code>kubectl rollout status deploy worker</code>
+```yaml
+kubectl rollout status deploy worker
+```
 
 ### Failed Update Details
 
 After rollout, we will update to a non-existing version to see how it behaves.
 
-<code>kubectl set image deploy worker worker=dockercoins/worker:v0.3</code>
+```yaml
+kubectl set image deploy worker worker=dockercoins/worker:v0.3
+```
 
 Now some pods fail to start and performance decrease. 
 
@@ -434,38 +519,52 @@ At this point, rollout is stuck.
 
 ### Recovering from Failed updates
 
-<code>kubectl describe deploy worker</code>
+```yaml
+kubectl describe deploy worker
+```
 
 We can see sections like:
 
-<code>Replicas:               10 desired | 5 updated | 13 total | 8 available | 5 unavailable
+```yaml
+Replicas:               10 desired | 5 updated | 13 total | 8 available | 5 unavailable
 OldReplicaSets:  worker-6bbc87d469 (0/0 replicas created), worker-b864d5ccd (8/8 replicas created)
-NewReplicaSet:   worker-7b896c69f9 (5/5 replicas created) </code>
+NewReplicaSet:   worker-7b896c69f9 (5/5 replicas created) 
+```
 
 That indicates something went wrong witht the rolling update.
 
 We can rollback the latest rolling update (we will go back to worker:v0.2). It can only used once. 
 
-<code>kubectl rollout undo deploy worker</code>
+```yaml
+kubectl rollout undo deploy worker
+```
 
 Now we are fine:
 
-<code>kubectl describe deploy worker
-Replicas:               10 desired | 10 updated | 10 total | 10 available | 0 unavailable</code>
+```yaml
+kubectl describe deploy worker
+Replicas:               10 desired | 10 updated | 10 total | 10 available | 0 unavailable
+```
 
 ## Rollout History
 
 We can see the history of rollours with the next command:
 
-<code>kubectl rollout history deployment worker</code>
+```yaml
+kubectl rollout history deployment worker
+```
 
 Revisions correspond to our ReplicaSets. This is stored as ReplicaSet annotations.
 
-<code>kubectl describe replicasets -l app=worker | grep -A3 Annotations</code>
+```yaml
+kubectl describe replicasets -l app=worker | grep -A3 Annotations
+```
 
 We can rollout to certain Revision:
 
-<code>kubectl rollout undo deploy worker --to-revision=1</code>
+```yaml
+kubectl rollout undo deploy worker --to-revision=1
+```
 
 ## YAML patch
 
@@ -478,7 +577,8 @@ If we want to change below things all at once without using edit.
 
 We can do all that with next YAML snippet and patch command:
 
-<code>kubectl patch demployment worker -p "
+```yaml
+kubectl patch demployment worker -p "
  spec:
    template:
      spec:
@@ -490,7 +590,8 @@ We can do all that with next YAML snippet and patch command:
         maxUnavailable: 0
         maxSurge: 1
     minReadySeconds: 10
-"</code>
+"
+```
 
 ## Healthchecks
 
@@ -575,23 +676,31 @@ We will use next repo for the exercise: https://github.com/bretfisher/kubercoins
 
 We edit rng-deployment.yaml and add:
 
-<code>        livenessProbe:
+```yaml
+        livenessProbe:
           httpGet:
             path: /
             port: 80
           initialDelaySeconds: 30
-          periodSeconds: 5</code>
+          periodSeconds: 5
+```
 Finaly, we apply changes:
 
-<code>kubectl apply -f .</code>
+```yaml
+kubectl apply -f .
+```
 
 Now we generate a high load to make fail the pod. We can use:
 
-<code>kubectl attach -n shpod -ti shpod 
-ab -c 10 -n 1000 http://ClusterIp/1</code>
+```yaml
+kubectl attach -n shpod -ti shpod 
+ab -c 10 -n 1000 http://ClusterIp/1
+```
 
-<code>kubectl get events -w
-kubectl get pods -w</code>
+```yaml
+kubectl get events -w
+kubectl get pods -w
+```
 
 Result is that pods will be restarting as liveness check will fail. 
 
@@ -621,49 +730,63 @@ We can use ConfigMaps to store configuration files or individual configuration f
 
 Example:
 
-<code>  # Create a ConfigMap with a single key, "app.conf"
+```yaml
+  # Create a ConfigMap with a single key, "app.conf"
   kubectl create configmap my-app-config --from-file=app.conf
   \# Create a ConfigMap with a single key, "app.conf" but another file
   kubectl create configmap my-app-config --from-file=app.conf=app-prod.conf
   \# Create a ConfigMap with multiple keys (one per file in the config.d directory)
-  kubectl create configmap my-app-config --from-file=config.d/ </code>
+  kubectl create configmap my-app-config --from-file=config.d/ 
+```
 
 ## Create a ConfigMap for the app haproxy (file)
 
 We will use official haproxy and it expects a configuration file at /usr/local/etc/haproxy/haproxy.cfg. 
 This app listens on port 80 and load balances connections between IBM and Google. 
 
-<code>  # We get the file
+```yaml
+  # We get the file
 curl https://k8smastery.com/haproxy.cfg -o haproxy.cfg
 \#  Now we create the configMap
 kubectl create configmap haproxy --from-file=haproxy.cfg
 \#  We can check the configMap
-kubectl get configmap/haproxy -o yaml</code>
+kubectl get configmap/haproxy -o yaml
+```
 
 In order to use it, we need to create a volume for the configMap and define the volumeMount in the pod. 
 
-<code>kubectl apply -f https://k8smastery.com/haproxy.yaml</code>
+```yaml
+kubectl apply -f https://k8smastery.com/haproxy.yaml
+```
 
 Now we test it from shpod pod:
 
-<code>kubectl exec -ti shpod -n shpod -- bash
+```yaml
+kubectl exec -ti shpod -n shpod -- bash
 kubectl get pods -n default -o wide
-curl 10.1.254.88</code>
+curl 10.1.254.88
+```
 
 ## Create a ConfigMap for the app docker registry (as env)
 
-<code>kubectl create configmap registry --from-literal=http.addr=0.0.0.0:80
-kubectl get configmap/registry -o yaml</code>
+```yaml
+kubectl create configmap registry --from-literal=http.addr=0.0.0.0:80
+kubectl get configmap/registry -o yaml
+```
 
 The yaml manifest of the pod will use the env parameter.
 
-<code>kubectl apply -f https://k8smastery.com/registry.yaml</code>
+```yaml
+kubectl apply -f https://k8smastery.com/registry.yaml
+```
 
 Now we test it from shpod pod:
 
-<code>kubectl exec -ti shpod -n shpod -- bash
+```yaml
+kubectl exec -ti shpod -n shpod -- bash
 kubectl get pods -n default -o wide
-curl 10.1.254.85/v2/_catalog</code>
+curl 10.1.254.85/v2/_catalog```
+
 
 ## Ingress
 
@@ -687,7 +810,9 @@ Basic features:
 
 #### Install NGINX Ingress controller
 
-<code>kubectl apply -f https://k8smastery.com/ic-nginx-hn.yaml</code>
+```yaml
+kubectl apply -f https://k8smastery.com/ic-nginx-hn.yaml
+```
 
 This yaml creates:
 
@@ -710,15 +835,19 @@ nip.io will forward *.10.149.3.214.nip.io
 
 First we need to deplot the applications. 
 
-<code>kubectl create deployment cheddar --image=bretfisher/cheese:cheddar
+```yaml
+kubectl create deployment cheddar --image=bretfisher/cheese:cheddar
 kubectl create deployment stilton --image=bretfisher/cheese:stilton
-kubectl create deployment wensleydale --image=bretfisher/cheese:wensleydale</code>
+kubectl create deployment wensleydale --image=bretfisher/cheese:wensleydale
+```
 
 Then the service for each application.
 
-<code>kubectl expose deployment cheddar --port=80
+```yaml
+kubectl expose deployment cheddar --port=80
 kubectl expose deployment stilton --port=80
-kubectl expose deployment wensleydale --port=80</code>
+kubectl expose deployment wensleydale --port=80
+```
 
 Here the YAML ingress. We apply it for each deploymeny.
 
