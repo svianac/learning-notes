@@ -54,6 +54,8 @@
       - [DNS using nip.io](#dns-using-nipio)
       - [Creation of Ingress in k8s](#creation-of-ingress-in-k8s)
     - [Add a redirect with Ingress](#add-a-redirect-with-ingress)
+  - [Swapping NGINX for Traefik](#swapping-nginx-for-traefik)
+  - [When no to use built-in Ingress resources](#when-no-to-use-built-in-ingress-resources)
 
 
 ## Multipass
@@ -886,3 +888,30 @@ kubectl apply -f https://k8smastery.com/redirect.yaml
 ```
 
 All traffic from the cluster will go to google.com. Except for defined ingress such us stilton.10.149.3.214.nip.io, wensleydale.10.149.3.214.nip.io and cheddar.10.149.3.214.nip.io.
+
+## Swapping NGINX for Traefik
+
+Traefik is a proxy with built-in kubernetes Ingress support and it has a dashboard. 
+
+1. We deploy the Traefik controller:
+
+```yaml
+  kubectl apply -f https://k8smastery.com/ic-traefik-hn.yaml
+  kubectl describe -n kube-system ds/traefik-ingress-controller
+```
+
+At this point, all works. As previous ingress was deployed and now we got a new reverse proxy.
+
+We can check the dashboard:
+
+```yaml
+kubectl port-forward traefik-ingress-controller-97z9h -n kube-system 8080:8080
+```
+
+## When no to use built-in Ingress resources
+
+- You need features beyond Ingress including: TCP support, traffic splitting, mTLS, egress, service mesh, response transformation of routing to 2+ services.
+- You have external load balancer (like AWS ELBs) which route to NodePorts
+- You don't need externally available HTTP services on the default ports.  
+
+Many projects are moving to CRD's (Custom Resource definitions)
