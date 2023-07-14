@@ -48,8 +48,12 @@
   - [Managing configuration for our APP](#managing-configuration-for-our-app)
   - [Create a ConfigMap for the app haproxy (file)](#create-a-configmap-for-the-app-haproxy-file)
   - [Create a ConfigMap for the app docker registry (as env)](#create-a-configmap-for-the-app-docker-registry-as-env)
+  - [Ingress](#ingress)
+    - [Principle of operation](#principle-of-operation)
+      - [Install NGINX Ingress controller](#install-nginx-ingress-controller)
       - [DNS using nip.io](#dns-using-nipio)
       - [Creation of Ingress in k8s](#creation-of-ingress-in-k8s)
+    - [Add a redirect with Ingress](#add-a-redirect-with-ingress)
 
 
 ## Multipass
@@ -69,7 +73,7 @@ More info:
 ```yaml
 kubectl get nodes -o wide
 kubectl get nodes -o yaml
-kubectl get nodes -o json | jq ".items[] | {name:.metada.name} + .status.capacity"
+kubectl get nodes -o json | jq ".items[] | {name:.metadata.name} + .status.capacity"
 kubectl describe node microk8s-vm
 ```
 
@@ -77,7 +81,7 @@ kubectl describe node microk8s-vm
 Exploring types and definitions
 
 ```yaml
-kubectl api-resources # perform instrospection and what kind of objects the api offers
+kubectl api-resources # perform introspection and what kind of objects the api offers
 kubectl explain type // kubectl explain node
 kubectl explain node.spec
 kubectl explain node --recursive
@@ -86,7 +90,7 @@ kubectl explain node --recursive
 ## Definitions service, pod, namespace
 - service: It is a stable endpoint to connect to "something".
 - pod: It is a group of containers running together and resources.
-- namespaces: Allows us to segregate resoures and isolate them.
+- namespaces: Allows us to segregate resource and isolate them.
 
 ## get and namespace
 
@@ -233,9 +237,9 @@ kubectl scale deployment api --replicas=5
 ```
 
 ## Port forwarding
-kubectl port-forward <\pod-name> <\locahost-port>:<\pod-port>
   
 ```yaml
+kubectl port-forward <pod-name> <locahost-port>:<pod-port>
 kubectl port-forward webui-6969bf568c-5x5n8 8080:80
 ```
 
@@ -258,7 +262,7 @@ kubectl apply -f rng.yaml #It will fail
 kubectl apply -f rng.yaml --validate=false #Remove validation
 ```
 
-Daemon creates one pod per node. Master nodes usually have tains to prevent pods running there.
+Daemon creates one pod per node. Master nodes usually have tain to prevent pods running there.
 
 Mission: Make sure that there is a pod matching this spec on each node.
 
@@ -344,7 +348,7 @@ At this point, when we use curl, sometimes apache replies and other times nginx.
 
 ## YAML
 
-CLI has more limitations than YAML. We can create YAML manifests from an existing objec using:
+CLI has more limitations than YAML. We can create YAML manifests from an existing object using:
 
 ```yaml
 kubectl get kind name -o yaml
@@ -376,9 +380,9 @@ spec:               #find with "kubectl describe pod"
 
 ### YAML: Tips and validations
 
-YAML helps to be declarative, this approach will help to automatize everyting, as you can combine it with a SCM. Changes can be reviewed before being applied. GitOps approach. Kustomize and Helm are based on YAML approach.
+YAML helps to be declarative, this approach will help to automatize everything, as you can combine it with a SCM. Changes can be reviewed before being applied. GitOps approach. Kustomize and Helm are based on YAML approach.
 
-Checking standard formating:
+Checking standard formatting:
 
 https://www.yamllint.com/
 https://codebeautify.org/yaml-validator
@@ -392,7 +396,7 @@ https://github.com/instrumenta/kubeval
 
 --dry-run builds the YAML. However, it does not do a "real" dry run. The kubernetes api could change the output of the --dry-run. An example:
 
-We genrate a YAML deployment.
+We generate a YAML deployment.
 
 ```yaml
 kubectl create deployment web --image nginx -o yaml > web.yaml
@@ -412,7 +416,7 @@ But if we use --server-dry-run, we will see what really kubernetes is going to s
 kubectl apply -f web.yaml --dry-run=server --validate=false -o yaml
 ```
 
-This outout has been verified much more extensively. It should be used rather than regular --dry-run. 
+This output has been verified much more extensively. It should be used rather than regular --dry-run. 
 
 ### YAML: kubectl diff
 
@@ -438,8 +442,8 @@ diff -u -N /tmp/LIVE-510768210/v1.Pod.default.hello /tmp/MERGED-583742770/v1.Pod
    uid: f143466b-a0b1-4b95-8b88-8a82a0843b9a
  spec:
    containers:
-\-  \- image: nginx
-\+  \- image: nginx:1.17
+\-  - image: nginx
+\+  - image: nginx:1.17
      imagePullPolicy: Always
      name: hello
      resources: {}
@@ -491,7 +495,7 @@ Now we update the deployment worker
 kubectl set image deploy worker worker=dockercoins/worker:v0.2
 ```
 
-We can check the status of the rollour by:
+We can check the status of the rollout by:
 
 ```yaml
 kubectl rollout status deploy worker
@@ -531,7 +535,7 @@ OldReplicaSets:  worker-6bbc87d469 (0/0 replicas created), worker-b864d5ccd (8/8
 NewReplicaSet:   worker-7b896c69f9 (5/5 replicas created) 
 ```
 
-That indicates something went wrong witht the rolling update.
+That indicates something went wrong with the rolling update.
 
 We can rollback the latest rolling update (we will go back to worker:v0.2). It can only used once. 
 
@@ -548,7 +552,7 @@ Replicas:               10 desired | 10 updated | 10 total | 10 available | 0 un
 
 ## Rollout History
 
-We can see the history of rollours with the next command:
+We can see the history of rollouts with the next command:
 
 ```yaml
 kubectl rollout history deployment worker
@@ -571,14 +575,14 @@ kubectl rollout undo deploy worker --to-revision=1
 If we want to change below things all at once without using edit.
 
 - Change image to v0.1
-- Be conversative on availability (always have desired number of available workers)
+- Be conservative on availability (always have desired number of available workers)
 - Go slow on rollout speed (update only one pod at a time)
 - Give some time to our workers to "warm up" before starting more. 
 
 We can do all that with next YAML snippet and patch command:
 
 ```yaml
-kubectl patch demployment worker -p "
+kubectl patch deployment worker -p "
  spec:
    template:
      spec:
@@ -619,7 +623,7 @@ When to use a liveness probe? When restarting the app is fixing the issue (deadl
 Indicates if the container is ready to serve traffic. If a container becomes "unready" it might be ready again soon. If the readiness probe fails:
 
 - The container is not killed.
-- If the pod is a member of a service, it is temporarily remobed. 
+- If the pod is a member of a service, it is temporarily removed. 
 - It is re-added as soon as the readiness probe passes again.
 
 When to use readiness probe? 
@@ -638,14 +642,14 @@ The idea of this probe was to replace initialDelaySeconds parameter, as this one
 - Rolling updates proceed when containers are actually ready (as opposed to merely started)
 - Containers in a broken state get killed and restarted (instead of serving errors or timeouts)
 - Unavailable backends get removed from load balancer rotation (thus improving response times across the board)
-- If a probe in not defined, it's as if there was an "always succesful" probe. This is not acceptable in production workflows.
+- If a probe in not defined, it's as if there was an "always successful" probe. This is not acceptable in production workflows.
 
 ### Different types of probe handlers
 
 #### HTTP request
 
 - Specify URL of the request.
-- Any statys code between 200 and 399 indicates success.
+- Any status code between 200 and 399 indicates success.
 
 #### TCP connection
 
@@ -716,7 +720,7 @@ Most of the ways our code picks up configuration:
 Ways to pass configuration to code running in container:
 
 - baking it into a custom image - This option may look easy but is not convenient. We will need different images for each tier.
-- command-line arguments - We can use ARG arguments, but it is not convenient when we have lots of confs.
+- command-line arguments - We can use ARG arguments, but it is not convenient when we have lots of configurations.
 - environment variables - We can use ENV map in the container specs. 
 - injecting configuration files
 - exposing it over the kubernetes API
@@ -733,9 +737,9 @@ Example:
 ```yaml
   # Create a ConfigMap with a single key, "app.conf"
   kubectl create configmap my-app-config --from-file=app.conf
-  \# Create a ConfigMap with a single key, "app.conf" but another file
+  # Create a ConfigMap with a single key, "app.conf" but another file
   kubectl create configmap my-app-config --from-file=app.conf=app-prod.conf
-  \# Create a ConfigMap with multiple keys (one per file in the config.d directory)
+  # Create a ConfigMap with multiple keys (one per file in the config.d directory)
   kubectl create configmap my-app-config --from-file=config.d/ 
 ```
 
@@ -745,11 +749,11 @@ We will use official haproxy and it expects a configuration file at /usr/local/e
 This app listens on port 80 and load balances connections between IBM and Google. 
 
 ```yaml
-  # We get the file
+# We get the file
 curl https://k8smastery.com/haproxy.cfg -o haproxy.cfg
-\#  Now we create the configMap
+#  Now we create the configMap
 kubectl create configmap haproxy --from-file=haproxy.cfg
-\#  We can check the configMap
+#  We can check the configMap
 kubectl get configmap/haproxy -o yaml
 ```
 
@@ -785,7 +789,8 @@ Now we test it from shpod pod:
 ```yaml
 kubectl exec -ti shpod -n shpod -- bash
 kubectl get pods -n default -o wide
-curl 10.1.254.85/v2/_catalog```
+curl 10.1.254.85/v2/_catalog
+```
 
 
 ## Ingress
@@ -804,8 +809,8 @@ Basic features:
 
 ### Principle of operation
 
-1. Deploy an Ingress controller such us NGINX server + NGINX Ingress controler, or Traefik.
-2. Sep up DNS (usually) to associeate DNS entries to the load balancer.
+1. Deploy an Ingress controller such us NGINX server + NGINX Ingress controller, or Traefik.
+2. Sep up DNS (usually) to associate DNS entries to the load balancer.
 3. Creation of Ingress resources for our Services resources in k8s.
 
 #### Install NGINX Ingress controller
@@ -818,7 +823,7 @@ This yaml creates:
 
 - Namespace
 - ConfigMaps: storing NGINX configs
-- ServiceAccpunt: Authentificate to Kubernetes API
+- ServiceAccount: Authenticate to Kubernetes API
 - Role/ClysterRole/RoleBinding: Authorization to API parts
 - LimitRange: Limit CPU/memory of NGINX
 - Service to expose NGINX on 80/443
@@ -833,7 +838,7 @@ nip.io will forward *.10.149.3.214.nip.io
 
 #### Creation of Ingress in k8s
 
-First we need to deplot the applications. 
+First we need to deploy the applications. 
 
 ```yaml
 kubectl create deployment cheddar --image=bretfisher/cheese:cheddar
@@ -849,7 +854,7 @@ kubectl expose deployment stilton --port=80
 kubectl expose deployment wensleydale --port=80
 ```
 
-Here the YAML ingress. We apply it for each deploymeny.
+Here the YAML ingress. We apply it for each deployment.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -871,3 +876,13 @@ spec:
 ```
 
 Now we should see pictures in: http://cheddar.10.149.3.214.nip.io/ , http://stilton.10.149.3.214.nip.io/ and http://wensleydale.10.149.3.214.nip.io/.
+
+### Add a redirect with Ingress
+
+We will add a 301 redirect to a new Ingress resource using the reverse proxy. 
+
+```yaml
+kubectl apply -f https://k8smastery.com/redirect.yaml
+```
+
+All traffic from the cluster will go to google.com. Except for defined ingress such us stilton.10.149.3.214.nip.io, wensleydale.10.149.3.214.nip.io and cheddar.10.149.3.214.nip.io.
