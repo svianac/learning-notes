@@ -48,6 +48,11 @@
   - [Managing configuration for our APP](#managing-configuration-for-our-app)
   - [Create a ConfigMap for the app haproxy (file)](#create-a-configmap-for-the-app-haproxy-file)
   - [Create a ConfigMap for the app docker registry (as env)](#create-a-configmap-for-the-app-docker-registry-as-env)
+  - [Ingress](#ingress)
+    - [Principle of operation](#principle-of-operation)
+      - [Install NGINX Ingress controller](#install-nginx-ingress-controller)
+      - [DNS using nip.io](#dns-using-nipio)
+      - [Creation of Ingress in k8s](#creation-of-ingress-in-k8s)
 
 
 ## Multipass
@@ -659,3 +664,81 @@ Now we test it from shpod pod:
 <code>kubectl exec -ti shpod -n shpod -- bash
 kubectl get pods -n default -o wide
 curl 10.1.254.85/v2/_catalog</code>
+
+## Ingress
+
+Service is not convenient for exposing HTTP traffic to a external network. LoadBalancer could be used but is not always possible and more complex. Custom reverse proxy also requires a lot of configuration files to be updated and maintained. A simpler option would be to use Ingress.
+
+
+Ingress: It is designed to handle HTTP/S traffic to specific port from external network. 
+
+Basic features: 
+
+- Load balancing
+- SSL termination
+- name-based virtual hosting
+- Can change the headers, redirections, etc.
+
+### Principle of operation
+
+1. Deploy an Ingress controller such us NGINX server + NGINX Ingress controler, or Traefik.
+2. Sep up DNS (usually) to associeate DNS entries to the load balancer.
+3. Creation of Ingress resources for our Services resources in k8s.
+
+#### Install NGINX Ingress controller
+
+<code>kubectl apply -f https://k8smastery.com/ic-nginx-hn.yaml</code>
+
+This yaml creates:
+
+- Namespace
+- ConfigMaps: storing NGINX configs
+- ServiceAccpunt: Authentificate to Kubernetes API
+- Role/ClysterRole/RoleBinding: Authorization to API parts
+- LimitRange: Limit CPU/memory of NGINX
+- Service to expose NGINX on 80/443
+
+#### DNS using nip.io
+
+We use nip.io. 10.149.3.214 is the address of our microk8s cluster.
+
+http://cheddar.10.149.3.214.nip.io/
+
+nip.io will forward *.10.149.3.214.nip.io 
+
+#### Creation of Ingress in k8s
+
+First we need to deplot the applications. 
+
+<code>kubectl create deployment cheddar --image=bretfisher/cheese:cheddar
+kubectl create deployment stilton --image=bretfisher/cheese:stilton
+kubectl create deployment wensleydale --image=bretfisher/cheese:wensleydale</code>
+
+Then the service for each application.
+
+<code>kubectl expose deployment cheddar --port=80
+kubectl expose deployment stilton --port=80
+kubectl expose deployment wensleydale --port=80</code>
+
+Here the YAML ingress. We apply it for each deploymeny.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cheddar
+spec:
+  rules:
+  - host: cheddar.10.149.3.214.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cheddar
+            port:
+              number: 80
+```
+
+Now we should see pictures in: http://cheddar.10.149.3.214.nip.io/ , http://stilton.10.149.3.214.nip.io/ and http://wensleydale.10.149.3.214.nip.io/.
