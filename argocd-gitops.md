@@ -5,6 +5,18 @@
   - [Introduction to Argo CD](#introduction-to-argo-cd)
   - [Why to use Argo CD?](#why-to-use-argo-cd)
   - [Install Argo CD on your cluster (Helm)](#install-argo-cd-on-your-cluster-helm)
+  - [Git Repository Structure for GitOps](#git-repository-structure-for-gitops)
+    - [Manifests](#manifests)
+    - [Helm](#helm)
+    - [Kustomize](#kustomize)
+    - [Choosing the Right Tool](#choosing-the-right-tool)
+  - [GitOps best practices](#gitops-best-practices)
+  - [Argo CD Architecture](#argo-cd-architecture)
+    - [API server](#api-server)
+    - [Repository server](#repository-server)
+    - [Application controller](#application-controller)
+    - [Redis](#redis)
+  - [Argo CD best practices](#argo-cd-best-practices)
 
 
 ## Understanding GitOps
@@ -136,3 +148,101 @@ argocd login 10.152.183.27
 argocd repo list
 argocd account update-password --current-password ztHtn6o5fpViZ7D7 --new-password ztHtn7o9fpVoZ7r6
 ```
+
+## Git Repository Structure for GitOps
+
+Best practices:
+- User a single repository for application or environment.
+- Use branches to manage different stages of the development and deployment process.
+- Store configuration data in a separate directory from application code.
+- Use descriptive names for directories and files.
+- Use Git Submodules to manage shared configuration data. 
+
+### Manifests
+
+They: 
+- Are simple and easy to understand.
+- Provide a clear and complete picture of the desired state of the kubernetes object.
+- Can be customized to meet specific requirements.  
+
+But:
+
+- Can become cumbersome to manage when number increases.
+- Require manual updates when changes are made.
+- Difficult to reuse across different environments.
+- Managing secrets in manifests can be a security risk.
+
+### Helm
+
+A package manager for Kubernetes. 
+
+- It provides a way to package, distribute, and manage kubernetes applications as a single unit.
+- Allow for parameterization, so you can reuse a chart with different values based on your environment. 
+
+But:
+
+- It can become complex to create and manage.
+- They can introduce risk to your deployment pipeline.
+
+### Kustomize
+
+- It provides a way to customize kubernetes objects without modifying the original YAML files.
+- It provides a way to manage complex configurations and apply multiple customizations in a predictable and repeatable manner.
+  
+But: 
+
+- It can be complex to create and manage, especially for complex configurations.
+- Requires an understanding of YAML and kubernetes resources, as well as a familiarity with Kustomize configuration files and parches.
+
+### Choosing the Right Tool
+
+- Consider the complexity of your configuration, the number of objects you need to manage, and your team's experience and expertise.
+- Manifests are a good choice for small to medium-sized deployments with a limited number of objects and simple configurations. 
+- Helm Charts are a good choice for managing complex applications with multiple objects and configurations.
+- Kustomize is a good choice for customizing YAML files or generating new ones based on a set of rules and patches. 
+
+## GitOps best practices
+
+- Use version control for all your infrastructure code.
+- Follow a pull-based model for deployments.
+- Ensure that all changes are auditable and traceable.
+- Automate as much as possible. 
+- Ensure that all configurations are tested and validated before deployment.
+- Implement best security practices.
+
+## Argo CD Architecture
+
+Main compoments: 
+
+### API server
+
+- The central component of the architecture.
+- Processes API requests from users.
+- Interacts with the Kubernetes API.
+- Monitor the state of the cluster.
+- Built on top of the Kubernetes API server.
+- Uses Kubernetes RBAC for authentication and authorization.
+
+### Repository server
+
+- Manages the Git repositories that contain the configuration and deployments instructions.
+- Interacts with Git to pull the configuration and deployments data.
+- Stores the data in a local cache for faster retrieval.
+
+### Application controller
+
+- Updates the Kubernetes objects based on data retrieved from Git.
+- Uses Kubernetes controllers (Deployments, StatefulSets, etc) to manage the cluster state.
+  
+### Redis
+
+- Stores metadata about the applications and resources in the cluster.
+- For example: the status of the application deployments, the cluster resources state, and the history of changes. 
+
+## Argo CD best practices
+
+1. Use Git as the source of truth for the configuration and deployment information.
+2. Use a version control system for the Git repository, such as GitHub or GitLab.
+3. Use Kubernetes namespaces to organize and manage the resources in the cluster.
+4. Use Kubernetes RBAC to control access to the resources in the cluster.
+5. Use Helm charts or Kustomize to manage the deployment of complex applications. 
