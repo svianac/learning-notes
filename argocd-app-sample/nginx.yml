@@ -7,7 +7,7 @@ metadata:
 spec:
  project: default
  source:
- repoURL: 'https://gitlab.com/[your username]/samplegitopsapp.git'
+ repoURL: 'https://github.com/svianac/learning-notes.git'
  path: manifests
  targetRevision: main
  destination:
