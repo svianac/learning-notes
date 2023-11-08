@@ -17,6 +17,8 @@
     - [Application controller](#application-controller)
     - [Redis](#redis)
   - [Argo CD best practices](#argo-cd-best-practices)
+  - [Argo CD deployment](#argo-cd-deployment)
+    - [Add a repository](#add-a-repository)
 
 
 ## Understanding GitOps
@@ -246,3 +248,106 @@ Main compoments:
 3. Use Kubernetes namespaces to organize and manage the resources in the cluster.
 4. Use Kubernetes RBAC to control access to the resources in the cluster.
 5. Use Helm charts or Kustomize to manage the deployment of complex applications. 
+
+## Argo CD deployment
+
+### Add a repository
+
+We have several methods. In this case, we will set up the authentication using a Personal access token from github that we created previously.
+
+```yaml
+argocd login 10.152.183.27
+argocd repo add https://github.com/svianac/learning-notes.git --username "xxx@gmail.com" --password "Personal access token"
+
+Repository 'https://github.com/svianac/learning-notes.git' added
+```
+Above task created a Kubernetes secret that contains the login data. 
+
+```yaml
+kubectl get secrets -n argocd
+kubectl describe secret repo-1833370407 -n argocd
+
+Name:         repo-1833370407
+Namespace:    argocd
+Labels:       argocd.argoproj.io/secret-type=repository
+Annotations:  managed-by: argocd.argoproj.io
+
+Type:  Opaque
+
+Data
+====
+username:  26 bytes
+password:  40 bytes
+type:      3 bytes
+url:       45 bytes
+```
+
+We can also see the new repo here: https://10.149.3.214:8090/settings/repos
+
+Once we added the repo, we need to connect the Argo CD to our application present our nginx.yml manifest from here: https://github.com/svianac/learning-notes/blob/main/argocd-app-sample/nginx.yml. 
+
+We checkout our repo and apply the nginx.yml defined. 
+
+```yaml
+# nginx.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/svianac/learning-notes.git'
+    path: argocd-app-sample
+    targetRevision: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+```
+
+
+```yaml
+git clone git@github.com:svianac/learning-notes.git
+cd learning-notes/argocd-app-sample/
+kubectl apply -f nginx.yml 
+
+application.argoproj.io/nginx created
+```
+Now if we visit https://10.149.3.214:8090/applications we will see a new application called nginx.
+Now we can create the next deployment.yml in the repo. 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
+
+After we commit the changes in the repo, due selfHeal set up to true, Argo CD will apply this manifest automatically and create the specified objects. This is called Reconcile process.
+
+```yaml
+kubectl get pods
+
+nginx-deployment-cbdccf466-w2gvb   1/1     Running   0             2m56s
+nginx-deployment-cbdccf466-592hr   1/1     Running   0             2m56s
+```
