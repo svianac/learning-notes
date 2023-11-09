@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/svianac/learning-notes.git'
-    path: argocd-app-sample
+    path: argocd-apps/argocd-app-sample
     targetRevision: main
   destination:
     server: 'https://kubernetes.default.svc'
