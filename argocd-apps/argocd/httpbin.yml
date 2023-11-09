@@ -1,15 +1,16 @@
-# argocd.yaml
+# nginx.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd
+  name: httpbin
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/svianac/learning-notes.git'
-    path: argocd-apps/argocd
-    targetRevision: main
+    chart: httpbin
+    repoURL: 'https://matheusfm.dev/charts'
+    helm:
+      releaseName: httpbin
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: default
