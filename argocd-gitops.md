@@ -19,6 +19,11 @@
   - [Argo CD best practices](#argo-cd-best-practices)
   - [Argo CD deployment](#argo-cd-deployment)
     - [Add a repository](#add-a-repository)
+  - [Deploying Helm charts to Argo CD](#deploying-helm-charts-to-argo-cd)
+    - [From a remote registry](#from-a-remote-registry)
+    - [When to use packaged charts?](#when-to-use-packaged-charts)
+    - [When to use local charts?](#when-to-use-local-charts)
+  - [Deploying application to Argo CD using Kustomize](#deploying-application-to-argo-cd-using-kustomize)
 
 
 ## Understanding GitOps
@@ -351,3 +356,100 @@ kubectl get pods
 nginx-deployment-cbdccf466-w2gvb   1/1     Running   0             2m56s
 nginx-deployment-cbdccf466-592hr   1/1     Running   0             2m56s
 ```
+
+## Deploying Helm charts to Argo CD
+
+Helm is a package manager for Kubernetes that helps you to install and manage application on your cluster. It uses charts, which are packages of preconfigured Kubernetes resources, to manage deployments. 
+
+Argo CD supports for Helm:
+
+1. Using ready-made charts stored in remote registries. 
+2. Using local charts stored in the git repository.
+
+### From a remote registry
+
+We will install the application [httpbin](https://httpbin.org/) (A simple HTTP Request & Response Service.) using the Helm chart available in this repo: https://matheusfm.dev/charts  
+
+First we will create a new application for argocd to manage its own applications. The link that ties the Argo CD with the Applications manifests. 
+```yaml
+# argocd.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/svianac/learning-notes.git'
+    path: argocd-apps/argocd
+    targetRevision: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+```
+
+And then we define another application which will be the Helm chart. 
+
+```yaml
+# httpbin.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: httpbin
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: httpbin
+    repoURL: 'https://matheusfm.dev/charts'
+    targetRevision: 0.1.1
+    helm:
+      releaseName: httpbin
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+```
+
+We can add new values to the Helm by adding:
+
+```yaml
+# httpbin.yaml
+[...]
+    helm:
+      releaseName: httpbin
+      values: |
+        service:
+          type: NodePort
+[...]
+```
+
+Once all is sync, we can see that the changes has been already applied in the kubernetes cluster.
+
+### When to use packaged charts?
+
+- When you don't need to modify the chart contents. Just use the vales file to customize the installation.
+- When the Helm chart is stored and maintained in a different repository by a different team or organization.
+
+### When to use local charts?
+
+- When the chart is developed locally as part of the application.
+- When you need to have control over the chart contents and not just the values file.
+
+## Deploying application to Argo CD using Kustomize
+
+- A kubernetes configuration management tool.
+- User to customize raw, template-free YAML files for multiple purposes.
+- Advantages: 
+  - Allows you to create reusable configuration templates.
+  - Can manage complex applications with multiple components and configurations.
+  - Eliminates the need for templating languages like Helm.
+- Argo CD supports Kustomize natively. 
