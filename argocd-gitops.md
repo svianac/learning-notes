@@ -24,6 +24,9 @@
     - [When to use packaged charts?](#when-to-use-packaged-charts)
     - [When to use local charts?](#when-to-use-local-charts)
   - [Deploying application to Argo CD using Kustomize](#deploying-application-to-argo-cd-using-kustomize)
+  - [Managing secrets in GitOps](#managing-secrets-in-gitops)
+    - [Sealed Secrets Overview](#sealed-secrets-overview)
+    - [Lab: Implementing Sealed Secrets with Argo CD.](#lab-implementing-sealed-secrets-with-argo-cd)
 
 
 ## Understanding GitOps
@@ -453,3 +456,161 @@ Once all is sync, we can see that the changes has been already applied in the ku
   - Can manage complex applications with multiple components and configurations.
   - Eliminates the need for templating languages like Helm.
 - Argo CD supports Kustomize natively. 
+
+## Managing secrets in GitOps
+
+Importance of secrets managementÑ:
+
+- A crucial aspect of any modern application development process.
+- Should be managed securely and separately from application code.
+- We need to ensure that secrets are:
+  - Encrypted: To protect against unauthorized access.
+  - Versioned: To maintain an audit trail and rollback capabilities.
+  - Automated: To reduce manual intervention and human error.
+
+Storing secrets in git repositories:
+
+- We need to store Secrets in Git,
+- Yet, this present a security risk.
+- We can use tools like HashiCorp's Vault or Sealed Secrets to mitigate this risk.
+
+### Sealed Secrets Overview
+
+It is an open-source project by Bitnami. It can securely store, version, and manage secrets in a GitOps workflow using Argo CD. It has 3 components: SealedSecret CRD, KubeSeal and Sealed Secrets Controller. 
+
+### Lab: Implementing Sealed Secrets with Argo CD.
+
+First we install the Bitnami sealed secrets in our kubernetes cluster: https://github.com/bitnami-labs/sealed-secrets/releases 
+
+We install the controller in Kubernetes and the command line.
+
+```yaml
+wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.3/controller.yaml 
+kubectl apply -f controller.yaml
+
+wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.3/kubeseal-0.24.3-linux-amd64.tar.gz
+tar -xvf kubeseal-0.24.3-linux-amd64.tar.gz
+sudo mv kubeseal /usr/local/bin
+sudo chmod +x /usr/local/bin/kubeseal
+```
+
+Then, we are going to create an application that is using a secrets for property handling.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        command: ["sh", "-c", "while true; do sleep 3600; done"]
+        env:
+        - name: APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: appsecret
+              key: apikey
+      restartPolicy: Always
+```
+
+Now we are going to create the secret. We encode the dummy API into base64 format:
+
+```yaml
+echo api_key_2a6f1d23eabc482f9032165de5a8c7 | base64
+
+YXBpX2tleV8yYTZmMWQyM2VhYmM0ODJmOTAzMjE2NWRlNWE4YzcK
+```
+
+Then, it is time to create the secret object:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: appsecret
+type: Opaque
+data:
+  apikey: YXBpX2tleV8yYTZmMWQyM2VhYmM0ODJmOTAzMjE2NWRlNWE4Yzc=
+```
+
+However, now we face a security problem if we push this to our git repository. Anybody can access to the git repository and decode the base64 string, obtaining the original value of apikey.
+
+We will use the kubeseal tool to get rid of this security problem. First we obtain the public key using:
+
+```yaml
+kubeseal --fetch-cert > publickey.pem
+```
+
+Now we encrypt the content of the secret using the following command:
+
+```yaml
+kubeseal --format=yaml --cert=publickey.pem < secret.yaml > sealedsecret.yaml
+```
+
+See the difference of the content once the secret has been sealed.
+
+```yaml
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  creationTimestamp: null
+  name: appsecret
+  namespace: default
+spec:
+  encryptedData:
+    apikey: AgBnHn16ScbC3tWgLyS9jLHTAKIAfhxzaNdK4IhoyJHvFcC8M8nMN4CbJ/L5HiZKeP/10PC45yWZJRSEOWsDHz8+g+/2bAom6w1E6dUmBDr/LqKwHkd9iKRY/FcrDf5jjdvCtDVnhki/tXaKPcWvroWmM5lFOvyHk4PEJRHVrxT51SjgG/HAFrTV02TiO8bhaFjsvgObaF3hsjTLMKScRXJfMq8KgW+/q+blCz+WiGpz+JRQg737GjuphrjfM+DMFJe/PH+rQubSI8m9y98nFcEw5llv9tAuZBRL4B4gwsLazJfN4mzsz7NsohsrNA8yrJS5Rt+R6UufPyW5mYWiWZ9Sjnm2IQoSWojiL1s1VeJ3PHwzT5q56ycWkozUSqIcMOPD1j1zGdKPXEBiJoG7S8NoAQJpYKWzg+cjjkov8dsXO4PlTzJ6GDOKq7fcu6Mwx0sEU85xzDdn/3SGQNOqXu26pQUZToeycpKsFMLzn2jtO+TM1dPS0I92QpNXE2nqOHtHAE8Myo3qKM+zeBHtoI2bmczJEWPYwhWDZEMKxzkrV9hqGHYkWZ74o93gOGbZCK5FcZRSk1gYlxjhkoCpQsrbsIj2jEqYTOZ2xJIr7ONdZ5hd0TB5pj+UBB6RwgHWmlpnxra4Bng2ny9GoFmquMKr90DzBPBogxMh6SuHdWi8GFhS/iBPdvcbGwlKw8UYH3gNtIygRELaiOTTlbj/Zq84sysknbOY7qhdgh/tB/RXp+W0BycVcQ==
+  template:
+    metadata:
+      creationTimestamp: null
+      name: appsecret
+      namespace: default
+    type: Opaque
+```
+
+Now we are safe to commit this to the git repository and remove the secret.yaml and publickey.pem files. 
+
+Finally, we are going to create a new argo CD application that will use the sealed secret.
+
+```yaml
+# apiservice.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apiservice
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/svianac/learning-notes.git'
+    path: argocd-apps/argocd/apiservice
+    targetRevision: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+```
+
+After this, we can refresh our argocd application and a new apiservice will appear. 
+
+Inside the pod we will manage to see the value of the environmental variable. However, this won't be possible from git perspective. As there won't be any secret.yaml. 
+
+```yaml
+kubectl exec -ti busybox-deployment-576bf8d585-bt4n2 -- sh
+/ # echo $APIKEY
+api_key_2a6f1d23eabc482f9032165de5a8c7
+```
