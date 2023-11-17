@@ -12,7 +12,7 @@ spec:
       labels:
         app: nginx
     spec:
-      containers:
+      containersss:
       - name: nginx
         image: nginx:1.14.2
         ports:
