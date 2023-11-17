@@ -27,6 +27,9 @@
   - [Managing secrets in GitOps](#managing-secrets-in-gitops)
     - [Sealed Secrets Overview](#sealed-secrets-overview)
     - [Lab: Implementing Sealed Secrets with Argo CD.](#lab-implementing-sealed-secrets-with-argo-cd)
+  - [Synchronization and Rollbacks](#synchronization-and-rollbacks)
+  - [Rollbacks practical example](#rollbacks-practical-example)
+  - [Multi-Cluster Deployment in Argo CD](#multi-cluster-deployment-in-argo-cd)
 
 
 ## Understanding GitOps
@@ -614,3 +617,144 @@ kubectl exec -ti busybox-deployment-576bf8d585-bt4n2 -- sh
 / # echo $APIKEY
 api_key_2a6f1d23eabc482f9032165de5a8c7
 ```
+
+## Synchronization and Rollbacks 
+
+Synchronization in GitOps:
+
+- It is a fundamental concept in GitOps.
+- It involves maintaining consistency between the desired state of your application or infrastructure as defined in your GIt repository, and the actual state in your Kubernetes cluster.
+- In a GitOps workflow, synchronization is performed automatically and continuously to ensure that your environment stays up-to-date with the latest changes. 
+
+Argo CD Sync:
+
+- Argo CD  is a powerful tool that enables continuos synchronization of your application resources in Kubernetes with the desired state defined in your Git repository.
+- When you create or update an application in Argo CD, it compares the actual state in the cluster with the desired state from the repository.
+- If there are any differences, Argo CD will automatically apply the necessary changes to synchronize the states. This process is called an Argo CD sync.  
+
+Rollbacks in GitOps:
+
+- In software development, rollbacks are essential for quickly reverting an application to a previous stable state in case of errors or issues. 
+- In GitOps, rollbacks involve reverting the changes in the Git repository to a previous commit, and then synchronizing the cluster to that commit.
+- This allows you to a quickly recover from any issues and restore the desired state of your application or infrastructure. 
+
+Argo CD Rollbacks:
+
+- Argo CD provides an easy way to perform rollbacks by using the "rollback" feature.
+- With Argo CD, you can select a specific commit or version of your application, and it will automatically synchronize the cluster to that version, effectively rolling back your application to that state.
+- This is a powerful feature that enables you to quickly recover from issues without the need for manual intervention. 
+
+## Rollbacks practical example
+
+When we need to do a rollback, we have 2 ways. We can use the web interface or the CLI. In this example, we will use the CLI. 
+
+Let's introduce a change that breaks the application. We added a non existing command in the start of the application which leaded in the next status: 
+
+```yaml
+Container is waiting because of CrashLoopBackOff. It is not started and not ready.
+The container last terminated with exit code 2 because of Error.
+```
+
+First of all, we need to disable the sync policy, otherwise, each time we rollback, the automatic sync will remove our rollback. In order to do it, we remove this section from the manifest related to the Argo CD application:
+
+```yaml
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+```
+
+Once application has resync and refreshed, it will be the last time it will do it by itself. 
+
+At this point we will use the next command in the CLI to check the history of the application:
+
+```yaml
+argocd login 10.152.183.27
+argocd app history apiservice
+ID  DATE                           REVISION
+0   2023-11-12 19:21:11 +0100 CET  main (ad75d38)
+1   2023-11-12 19:26:43 +0100 CET  main (b88eb17)
+2   2023-11-12 19:30:59 +0100 CET  main (b88eb17)
+3   2023-11-17 19:50:36 +0100 CET  main (3ef8b13)
+4   2023-11-17 19:54:44 +0100 CET  main (c663333)
+5   2023-11-17 19:55:46 +0100 CET  main (c663333)
+6   2023-11-17 19:56:27 +0100 CET  main (c663333)
+```
+And we can cross check with the git history:
+
+
+```yaml
+git log --oneline
+c663333 (HEAD -> main, origin/main, origin/HEAD) Disable sync
+3ef8b13 Break the application
+1b66480 Revert "Add a change that breaks the application"
+feb7061 Revert "Disable sync"
+[...]
+b88eb17 Delete argocd-apps/apiservice.yaml
+```
+
+Based on previous output, we know we want to rollback to the b88eb17, which was last time that our application was working. 
+
+```yaml
+argocd app rollback apiservice 1
+
+TIMESTAMP                  GROUP              KIND     NAMESPACE                  NAME    STATUS   HEALTH         HOOK  MESSAGE
+2023-11-17T20:05:21+01:00   apps        Deployment       default    busybox-deployment    Synced  Degraded              
+2023-11-17T20:05:21+01:00  bitnami.com  SealedSecret     default             appsecret    Synced  Healthy               
+2023-11-17T20:05:22+01:00  bitnami.com  SealedSecret     default             appsecret    Synced  Healthy               sealedsecret.bitnami.com/appsecret unchanged
+2023-11-17T20:05:22+01:00   apps        Deployment       default    busybox-deployment    Synced  Degraded              deployment.apps/busybox-deployment configured
+2023-11-17T20:05:22+01:00   apps  Deployment     default    busybox-deployment  OutOfSync  Progressing              deployment.apps/busybox-deployment configured
+
+Name:               argocd/apiservice
+Project:            default
+Server:             https://kubernetes.default.svc
+Namespace:          default
+URL:                https://10.152.183.27/applications/argocd/apiservice
+Repo:               https://github.com/svianac/learning-notes.git
+Target:             main
+Path:               argocd-apps/argocd/apiservice
+SyncWindow:         Sync Allowed
+Sync Policy:        <none>
+Sync Status:        OutOfSync from main (c663333)
+Health Status:      Healthy
+
+Operation:          Sync
+Sync Revision:      b88eb17366ffa00171e5f2c9ea744076646118fa
+Phase:              Succeeded
+Start:              2023-11-17 20:05:21 +0100 CET
+Finished:           2023-11-17 20:05:22 +0100 CET
+Duration:           1s
+Message:            successfully synced (all tasks run)
+
+GROUP        KIND          NAMESPACE  NAME                STATUS     HEALTH   HOOK  MESSAGE
+apps         Deployment    default    busybox-deployment  OutOfSync  Healthy        deployment.apps/busybox-deployment configured
+bitnami.com  SealedSecret  default    appsecret           Synced     Healthy        sealedsecret.bitnami.com/appsecret unchanged
+``` 
+
+At this point, the deployment is healthy again. However, the status is OutOfSync. Before synchronizing again, we need to make sure that our git repo is fixed (we can revert commits or fix as required). Finally, sync status will change to synced once we manually trigger this operation. 
+
+## Multi-Cluster Deployment in Argo CD
+
+Why to have multiple cluster?
+
+- We can use one cluster for production and other for staging. 
+- Enables Blue / Green deployments.
+- Enables separation of Development and QA.
+- Enables Multi-region deployments.
+- Cluster segmentation where each of them can have dedicated hardware. 
+- Enables isolated workloads.
+- Enables different environments for different teams. 
+- Achieve high availability.
+
+We can select what cluster will receive the deployment in the next section of the Argo CD application manifest:
+
+
+```yaml
+[...]
+destination:
+  server: 'https://192.168.2.36:6443'
+  namespace: default
+[...]
+```
+
+We can have 2 Argo CD application manifest where one will point to one cluster and the other the second cluster. For example,  onepageserver-primary.yaml and onepageserver-secondary.yaml. 
