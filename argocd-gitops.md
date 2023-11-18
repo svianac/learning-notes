@@ -862,3 +862,4 @@ What are Canary deployments?
 Name origins: Canary birds were used in coal mines to test for the existence of toxic gases. 
 
 For a detailed explanation about how to implement Canary deployments: https://argo-rollouts.readthedocs.io/en/stable/features/canary/ 
+We can algo use Ingress Nginx Canary Deployments: https://kubernetes.github.io/ingress-nginx/examples/canary/
