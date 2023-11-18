@@ -30,6 +30,9 @@
   - [Synchronization and Rollbacks](#synchronization-and-rollbacks)
   - [Rollbacks practical example](#rollbacks-practical-example)
   - [Multi-Cluster Deployment in Argo CD](#multi-cluster-deployment-in-argo-cd)
+  - [Introducing Argo CD ApplicationSets](#introducing-argo-cd-applicationsets)
+  - [Implementing Blue-Green Deployments](#implementing-blue-green-deployments)
+  - [Implementing Canary Deployments](#implementing-canary-deployments)
 
 
 ## Understanding GitOps
@@ -758,3 +761,104 @@ destination:
 ```
 
 We can have 2 Argo CD application manifest where one will point to one cluster and the other the second cluster. For example,  onepageserver-primary.yaml and onepageserver-secondary.yaml. 
+
+## Introducing Argo CD ApplicationSets
+
+One of the disadvantages of the above method, is that we need to maintain 1 Argo CD application manifest for each cluster. However, we can use ApplicationSets manifest, which allow us to target applications to multiple Kubernetes.
+
+This is an example of ApplicationSet manifest:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: onepageserver
+spec:
+  generators:
+  - list:
+      elements:
+      - cluster: production
+        url: 'https://192.168.2.35:6443'
+        revision: main
+      - cluster: development
+        url: 'https://192.168.2.36:6443'
+        revision: dev
+  template:
+    metadata:
+      name: '{{.cluster}}-onepageserver'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/svianac/learning-notes.git'
+        targetRevision: '{{revision}}'
+        path: onepageserver
+      destination:
+        server: '{{.url}}'
+        namespace: default
+```
+
+It uses Go template language, so we can use conditionals. 
+
+## Implementing Blue-Green Deployments
+
+What are Blue/Green deployments? 
+
+- There are two identical environments both of with serve production. 
+- Only one of them is active at any given time. For example, blue.
+- The green environment is prepared for the next release: 
+  - Unit tests
+  - Integration tests
+  - System tests
+  - Performance test
+  - Security tests
+  - Usability tests
+  - Regression tests
+- Once the tests are passed, the green environment can serve production, when the blue one will be prepared for the next release. 
+- To switch the environments from role can be, for example, change the proper endpoints.
+- Deployments and rollbacks are easy and achieve zero downtime.
+
+We can use previous ApplicationSet to prepare a Blue-Green deployment:
+
+```yaml
+[[...]]
+      elements:
+      - cluster: blue
+        url: 'https://192.168.2.35:6443'
+        revision: 1.0.0
+      - cluster: green
+        url: 'https://192.168.2.36:6443'
+        revision: dev
+[[...]]
+```
+
+Where blue will serve as production the release 1.0.0 and green still is used for development purposes. Simultaneously, we would need to edit our Load Balancer to only forward traffic to our blue cluster (https://192.168.2.35:6443), as this one is behaving as production. All new connections will be forwarded to the production environment, with zero downtime.
+
+In the case we want to do deploy the next release, we can change the ApplicationSet. 
+
+```yaml
+[[...]]
+      elements:
+      - cluster: blue
+        url: 'https://192.168.2.35:6443'
+        revision: 1.0.0
+      - cluster: green
+        url: 'https://192.168.2.36:6443'
+        revision: 1.1.0
+[[...]]
+```
+
+After the green environment has passed all the testing, we can go back to our Load Balancer and switch the traffic from blue cluster to the green cluster, which contains the newer release version. 
+
+## Implementing Canary Deployments
+
+What are Canary deployments?
+
+- It is a software release management strategy that involves deploying a new version of an application alongside the existing one, but only exposing a small subset of users to the new version.
+- We can roll out a new feature only to the 5% of the users.
+- Gradually increase the Canary percentage while monitoring and collecting user feedback. 
+- In the event of failure, Canary percentage is switched back to the stable release. 
+- It has the advantage of not requiring dual environments like Blue/Green. 
+
+Name origins: Canary birds were used in coal mines to test for the existence of toxic gases. 
+
+For a detailed explanation about how to implement Canary deployments: https://argo-rollouts.readthedocs.io/en/stable/features/canary/ 
