@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: generator-apps
+  namespace: default
+spec:
+  generators:
+  - list:
+      elements:
+      - env: staging
+      - env: production
+  template:
+    metadata:
+      name: '{{env}}-ci'
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+      source:
+        repoURL: 'https://github.com/svianac/learning-notes.git'
+        targetRevision: main
+        path: argocd-apps/kustomize-as/overlays/{{env}}
+      destination:
+        server: '{{url}}'
+        namespace: default
