@@ -8,6 +8,7 @@ spec:
       elements:
       - env: staging
       - env: production
+      - env: develop
   template:
     metadata:
       name: '{{env}}-ci'
