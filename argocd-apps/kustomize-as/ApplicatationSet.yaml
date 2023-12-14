@@ -23,5 +23,5 @@ spec:
         targetRevision: main
         path: argocd-apps/kustomize-as/overlays/{{env}}
       destination:
-        server: '{{url}}'
+        server: 'https://kubernetes.default.svc'
         namespace: default
