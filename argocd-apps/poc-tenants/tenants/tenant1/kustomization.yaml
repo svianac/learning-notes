@@ -1,0 +1,6 @@
+commonLabels:
+  variant: tenant1
+bases:
+- ../../base
+patchesStrategicMerge:
+- config-map.yaml

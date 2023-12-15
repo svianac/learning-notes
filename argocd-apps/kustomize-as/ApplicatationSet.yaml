@@ -6,9 +6,10 @@ spec:
   generators:
   - list:
       elements:
-      - env: staging
       - env: production
+      - env: staging
       - env: develop
+      - env: integration
   template:
     metadata:
       name: '{{env}}-ci'
