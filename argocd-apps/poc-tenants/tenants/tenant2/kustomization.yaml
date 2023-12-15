@@ -1,3 +1,4 @@
+namespace: tenant2-ci
 namePrefix: tenant2-
 commonLabels:
   variant: tenant2
@@ -5,3 +6,12 @@ bases:
 - ../../base
 patchesStrategicMerge:
 - configmap.yml
+
+patches:
+- target:
+    kind: Namespace
+    name: default
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: tenant2-ci
