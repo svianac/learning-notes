@@ -10,7 +10,7 @@ patchesStrategicMerge:
 patches:
 - target:
     kind: Namespace
-    name: default
+    name: null
   patch: |-
     - op: replace
       path: /metadata/name

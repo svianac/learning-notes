@@ -1,7 +1,7 @@
-namespace: tenant2-ci
-namePrefix: tenant2-
+namespace: tenant3-ci
+namePrefix: tenant3-
 commonLabels:
-  variant: tenant2
+  variant: tenant3
 bases:
 - ../../base
 patchesStrategicMerge:
@@ -10,8 +10,8 @@ patchesStrategicMerge:
 patches:
 - target:
     kind: Namespace
-    name: default
+    name: null
   patch: |-
     - op: replace
       path: /metadata/name
-      value: tenant2-ci
+      value: tenant3-ci

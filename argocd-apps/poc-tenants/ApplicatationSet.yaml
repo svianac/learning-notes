@@ -7,7 +7,7 @@ spec:
   - list:
       elements:
       - tenant: tenant1
-      - tenant: tenant2
+      - tenant: tenant3
   template:
     metadata:
       name: '{{tenant}}-nginx-ci'
@@ -15,8 +15,8 @@ spec:
       project: default
       syncPolicy:
         automated:
-          prune: true
-          selfHeal: true
+          prune: false
+          selfHeal: false
       source:
         repoURL: 'https://github.com/svianac/learning-notes.git'
         targetRevision: main
