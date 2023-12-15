@@ -1,6 +1,6 @@
-namePrefix: tenant1-
+namePrefix: tenant2-
 commonLabels:
-  variant: tenant1
+  variant: tenant2
 bases:
 - ../../base
 patchesStrategicMerge:

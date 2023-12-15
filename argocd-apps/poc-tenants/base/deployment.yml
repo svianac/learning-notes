@@ -5,7 +5,6 @@ metadata:
   labels:
     app: nginx
   name: nginx
-  namespace: tenant-ci
 spec:
   replicas: 1
   selector:

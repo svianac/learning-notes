@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: generator-apps
+spec:
+  generators:
+  - list:
+      elements:
+      - tenant: tenant1
+      - tenant: tenant2
+  template:
+    metadata:
+      name: '{{tenant}}-ci'
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+      source:
+        repoURL: 'https://github.com/svianac/learning-notes.git'
+        targetRevision: main
+        path: argocd-apps/poc-tenants/tenants/{{tenant}}
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{tenant}}-ci'

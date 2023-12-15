@@ -7,7 +7,7 @@ data:
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Custom Nginx Page for tenant1</title>
+        <title>Custom Nginx Page for tenant2</title>
     </head>
     <body>
         <h1>Welcome to my custom Nginx page!</h1>
