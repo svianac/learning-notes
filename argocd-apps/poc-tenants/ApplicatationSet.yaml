@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: generator-apps
+  name: generator-apps-poc-tenants
 spec:
   generators:
   - list:
@@ -10,7 +10,7 @@ spec:
       - tenant: tenant2
   template:
     metadata:
-      name: '{{tenant}}-ci'
+      name: '{{tenant}}-nginx-ci'
     spec:
       project: default
       syncPolicy:
@@ -23,4 +23,4 @@ spec:
         path: argocd-apps/poc-tenants/tenants/{{tenant}}
       destination:
         server: 'https://kubernetes.default.svc'
-        namespace: '{{tenant}}-ci'
+        namespace: default
