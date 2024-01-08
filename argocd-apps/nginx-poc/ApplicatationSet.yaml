@@ -7,6 +7,7 @@ spec:
   - git:
       repoURL: 'https://github.com/svianac/learning-notes.git'
       revision: main
+      directories:
       - path: argocd-apps/nginx-poc/clients/*
   template:
     metadata:
@@ -25,4 +26,4 @@ spec:
         path: '{{path}}'
       destination:
         server: 'https://kubernetes.default.svc'
-        namespace: '{{path.basename}}'
+        namespace: 'default'
