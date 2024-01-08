@@ -4,14 +4,17 @@ metadata:
   name: generator-apps-poc-clients
 spec:
   generators:
-  - list:
-      elements:
-      - client: client1
+  - git:
+      repoURL: 'https://github.com/svianac/learning-notes.git'
+      revision: main
+      - path: argocd-apps/nginx-poc/clients/*
   template:
     metadata:
-      name: '{{client}}-nginx-ci'
+      name: '{{path.basename}}-nginx-ci'
+      labels:
+        variant: '{{path.basename}}'
     spec:
-      project: default
+      project: clients
       syncPolicy:
         automated:
           prune: false
@@ -19,7 +22,7 @@ spec:
       source:
         repoURL: 'https://github.com/svianac/learning-notes.git'
         targetRevision: main
-        path: argocd-apps/nginx-poc/clients/{{client}}
+        path: '{{path}}'
       destination:
         server: 'https://kubernetes.default.svc'
-        namespace: default
+        namespace: '{{path.basename}}'
