@@ -1,0 +1,29 @@
+#notes-argocd.yml
+
+minikube start --profile argo-cd
+
+kubectl port-forward service/argocd-server -n argocd 8090:443 --address="0.0.0.0"
+
+argocd login localhost:8090 --username admin --password rgM7EVL-Oqbt9s4U
+
+argocd app list
+
+argocd appset list
+
+argocd appset list -o name
+
+argocd appset delete generator-apps-poc-clients
+
+argocd appset create ApplicatationSet.yaml
+
+argocd proj list
+argocd proj create clients
+
+argocd appset create ApplicatationSet.yaml --upsert
+
+k get ApplicationSet --all-namespaces
+k get ApplicationSet generator-apps-poc-clients -n argocd
+k delete ApplicationSet generator-apps-poc-clients -n argocd --cascade=false
+k delete ApplicationSet generator-apps-poc-clients -n argocd --cascade=orphan
+
+k describe ApplicationSet generator-apps-poc-clients -n argocd
