@@ -2,3 +2,11 @@ bases:
 - ../../base
 patchesStrategicMerge:
 - configmap.yml
+
+patches:
+- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
