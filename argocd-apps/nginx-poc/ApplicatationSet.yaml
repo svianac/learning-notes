@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: generator-apps-poc-clients
+spec:
+  generators:
+  - list:
+      elements:
+      - client: client1
+  template:
+    metadata:
+      name: '{{client}}-nginx-ci'
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: false
+      source:
+        repoURL: 'https://github.com/svianac/learning-notes.git'
+        targetRevision: main
+        path: argocd-apps/nginx-poc/clients/{{client}}
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: default

@@ -1,0 +1,8 @@
+commonLabels:
+  app: nginx
+
+resources:
+- ns.yml
+- configmap.yml
+- deployment.yml
+- service.yml

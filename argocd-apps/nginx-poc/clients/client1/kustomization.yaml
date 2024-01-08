@@ -1,0 +1,6 @@
+commonLabels:
+  variant: client1
+bases:
+- ../../base
+patchesStrategicMerge:
+- configmap.yml
