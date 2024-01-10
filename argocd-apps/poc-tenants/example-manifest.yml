@@ -14,7 +14,7 @@ metadata:
   name: nginx
   namespace: tenant-ci
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: nginx
