@@ -2,6 +2,6 @@ commonLabels:
   app: nginx
 
 resources:
-- configmap.yml
+#- configmap.yml
 - deployment.yml
-- service.yml
+#- service.yml
