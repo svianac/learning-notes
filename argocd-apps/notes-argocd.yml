@@ -14,12 +14,12 @@ argocd appset list -o name
 
 argocd appset delete generator-apps-poc-clients
 
-argocd appset create ApplicatationSet.yaml
+argocd appset create ApplicationSet.yaml
 
 argocd proj list
 argocd proj create clients
 
-argocd appset create ApplicatationSet.yaml --upsert
+argocd appset create ApplicationSet.yaml --upsert
 
 k get ApplicationSet --all-namespaces
 k get ApplicationSet generator-apps-poc-clients -n argocd
