@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Custom Nginx Page for tenant-ci</title>
+    </head>
+    <body>
+        <h1>Welcome to my custom Nginx page!</h1>
+    </body>
+    </html>

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: generator-apps-poc-clients
+spec:
+  generators:
+  - git:
+      repoURL: 'https://github.com/svianac/learning-notes.git'
+      revision: main
+      directories:
+      - path: argocd-apps/nginx-poc/clients/*
+  template:
+    metadata:
+      name: '{{path.basename}}-nginx-ci'
+      labels:
+        variant: '{{path.basename}}'
+        managed: argocd
+    spec:
+      project: clients
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: false
+      source:
+        repoURL: 'https://github.com/svianac/learning-notes.git'
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{path.basename}}'
