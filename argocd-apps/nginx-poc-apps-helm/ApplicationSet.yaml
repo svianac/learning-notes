@@ -1,30 +1,33 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: generator-apps-poc-clients
+  name: core-apps
+  namespace: argocd
 spec:
   generators:
-  - git:
-      repoURL: 'https://github.com/svianac/learning-notes.git'
-      revision: main
-      directories:
-      - path: argocd-apps/nginx-poc/clients/*
+  - clusters: {} #Empty map
   template:
     metadata:
-      name: '{{path.basename}}-nginx-ci'
-      labels:
-        variant: '{{path.basename}}'
-        managed: argocd
+      name: "{{name}}-{{appName}}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: ".;.."
     spec:
-      project: clients
-      syncPolicy:
-        automated:
-          prune: false
-          selfHeal: false
+      project: default
       source:
         repoURL: 'https://github.com/svianac/learning-notes.git'
-        targetRevision: main
-        path: '{{path}}'
+        targetRevision: HEAD
+        path: "argocd-apps/nginx-poc-apps-helm/nginx"
+        helm:
+          # Release name override (defaults to application name)
+          releaseName: "{{appName}}"
       destination:
-        server: 'https://kubernetes.default.svc'
-        namespace: '{{path.basename}}'
+        name: "{{name}}"
+        namespace: "tenant-ci"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 2

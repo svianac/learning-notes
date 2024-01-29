@@ -1,12 +1,14 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
     app: nginx
-  name: nginx
+  name: "{{ .Values.tenantName }}"
+  namespace: tenant-ci
 spec:
-  replicas: 3
+  replicas: "{{ .Values.replicas | default .Chart.replicas }}"
   selector:
     matchLabels:
       app: nginx
@@ -28,3 +30,4 @@ spec:
       - name: nginx-config-volume
         configMap:
           name: nginx-config
+---
