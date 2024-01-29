@@ -7,14 +7,12 @@ spec:
   generators:
   - git:
       repoURL: 'https://github.com/svianac/learning-notes.git'
-      revision: main
+      revision: HEAD
       directories:
-      - path: 'argocd-apps/nginx-poc-apps-helm/tenants/*'  
+      - path: 'argocd-apps/nginx-poc-apps-helm/tenants/*'
   template:
     metadata:
       name: "{{path.basename}}-nginx"
-      annotations:
-        argocd.argoproj.io/manifest-generate-paths: ".;.."
     spec:
       project: default
       source:
@@ -34,7 +32,3 @@ spec:
         automated:
           prune: true
           selfHeal: true
-        syncOptions:
-          - CreateNamespace=true
-        retry:
-          limit: 2
