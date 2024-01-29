@@ -1,3 +1,0 @@
-name: &tenant-name "tenant4" # yaml helm var reference
-
-tenantName: *tenant-name
