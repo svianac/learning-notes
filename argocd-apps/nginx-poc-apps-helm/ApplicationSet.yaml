@@ -5,7 +5,10 @@ metadata:
   namespace: argocd
 spec:
   generators:
-  - clusters: {} #Empty map
+  - list:
+      elements:
+      - cluster: production
+        url: 'https://kubernetes.default.svc'
   template:
     metadata:
       name: "{{name}}-{{appName}}"
@@ -21,7 +24,7 @@ spec:
           # Release name override (defaults to application name)
           releaseName: "{{appName}}"
       destination:
-        name: "{{name}}"
+        server: '{{.url}}'
         namespace: "tenant-ci"
       syncPolicy:
         automated:
