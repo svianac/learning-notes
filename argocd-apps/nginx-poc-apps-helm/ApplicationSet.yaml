@@ -5,13 +5,16 @@ metadata:
   namespace: argocd
 spec:
   generators:
-  - list:
-      elements:
-      - cluster: production
-        url: 'https://kubernetes.default.svc'
+  - git:
+      repoURL: 'https://github.com/svianac/learning-notes.git'
+      revision: main
+      directories:
+      - path: 'argocd-apps/nginx-poc-apps-helm/tenants/*'  
   template:
     metadata:
-      name: "{{name}}-{{appName}}"
+      name: "{{path.basename}}-nginx"
+      labels:
+        - managed: argocd
       annotations:
         argocd.argoproj.io/manifest-generate-paths: ".;.."
     spec:
@@ -22,9 +25,12 @@ spec:
         path: "argocd-apps/nginx-poc-apps-helm/nginx"
         helm:
           # Release name override (defaults to application name)
-          releaseName: "{{appName}}"
+          releaseName: "{{path.basename}}"
+          valueFiles:
+          - "common.yaml"
+          - "{{path}}/values.yaml"
       destination:
-        server: '{{.url}}'
+        server: 'https://kubernetes.default.svc'
         namespace: "tenant-ci"
       syncPolicy:
         automated:
