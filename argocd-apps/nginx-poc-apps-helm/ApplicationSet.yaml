@@ -13,8 +13,6 @@ spec:
   template:
     metadata:
       name: "{{path.basename}}-nginx"
-      labels:
-        - managed: argocd
       annotations:
         argocd.argoproj.io/manifest-generate-paths: ".;.."
     spec:
@@ -28,7 +26,7 @@ spec:
           releaseName: "{{path.basename}}"
           valueFiles:
           - "common.yaml"
-          - "{{path}}/values.yaml"
+          - "../tenants/{{path.basename}}/values.yaml"
       destination:
         server: 'https://kubernetes.default.svc'
         namespace: "tenant-ci"
