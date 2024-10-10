@@ -14,15 +14,16 @@ def scriptApproval = ScriptApproval.get()
 if (scriptApproval == null) {
     println("ScriptApproval instance is not available.")
 } else {
-    // Approve all pending signatures
+    // Get all pending signatures
     def pendingSignatures = scriptApproval.getPendingSignatures()
-    
+
     if (pendingSignatures.isEmpty()) {
         println("No pending signatures to approve.")
     } else {
-        pendingSignatures.each { signature ->
-            println("Approving signature: ${signature}")
-            scriptApproval.approveSignature(signature)
+        // Approve each pending signature
+        pendingSignatures.each { pendingSignature ->
+            println("Approving signature: ${pendingSignature.signature}")
+            scriptApproval.approveSignature(pendingSignature.signature)
         }
         println("All pending signatures approved.")
     }
