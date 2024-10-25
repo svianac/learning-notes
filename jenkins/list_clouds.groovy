@@ -28,3 +28,29 @@ def jenkinsInstance = Jenkins.instance
 jenkinsInstance.clouds.each { cloud ->
     println cloud.name
 }
+### also templates
+import jenkins.model.Jenkins
+import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud
+
+// Get the Jenkins instance
+def jenkinsInstance = Jenkins.instance
+
+// Fetch the list of all configured clouds
+jenkinsInstance.clouds.each { cloud ->
+    def cloudName = cloud.displayName ?: cloud.getClass().getSimpleName()
+    println "Cloud Name: ${cloudName}"
+    
+    // Check if the cloud is of type KubernetesCloud
+    if (cloud instanceof KubernetesCloud) {
+        println "  Pod Templates:"
+        
+        // Iterate over each pod template in this Kubernetes cloud
+        cloud.templates.each { podTemplate ->
+            println "    - ${podTemplate.name}"
+        }
+    } else {
+        println "  (No pod templates for this cloud type)"
+    }
+    
+    println ""
+}
