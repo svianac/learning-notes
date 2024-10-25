@@ -16,4 +16,15 @@ if (clouds.isEmpty()) {
         // Print cloud details
         println "- Name: ${cloud.name} (Class: ${cloud.getClass().getSimpleName()})"
     }
+} 
+
+#### only name
+import jenkins.model.Jenkins
+
+// Get the Jenkins instance
+def jenkinsInstance = Jenkins.instance
+
+// Fetch the list of all configured clouds and print only their names
+jenkinsInstance.clouds.each { cloud ->
+    println cloud.name
 }
