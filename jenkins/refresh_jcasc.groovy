@@ -8,15 +8,7 @@ jobs:
                       job("reload-jcasc-configuration") {
                           description("Reloads the JCasC configuration without restarting Jenkins.")
                           steps {
-                              systemGroovyCommand('''
-                                  def jcasC = jenkins.model.Jenkins.instance.getExtensionList(io.jenkins.plugins.casc.ConfigurationAsCode.class)[0]
-                                  if (jcasC) {
-                                      jcasC.configure()
-                                      println("JCasC configuration reloaded successfully.")
-                                  } else {
-                                      println("JCasC plugin is not available.")
-                                  }
-                              ''')
+                              systemGroovyCommand("def jcasC = jenkins.model.Jenkins.instance.getExtensionList(io.jenkins.plugins.casc.ConfigurationAsCode.class)[0]; if (jcasC) { jcasC.configure(); println(\\"JCasC configuration reloaded successfully.\\"); } else { println(\\"JCasC plugin is not available.\\"); }")
                           }
                       }
                   ''')
