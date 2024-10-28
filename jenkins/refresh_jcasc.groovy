@@ -1,21 +1,28 @@
-pipeline {
-    agent any
-    stages {
-        stage('Reload JCasC Configuration') {
-            steps {
-                script {
-                    // Trigger a configuration reload in the JCasC plugin
-                    def jenkinsInstance = jenkins.model.Jenkins.instance
-                    def jcasC = jenkinsInstance.getExtensionList('io.jenkins.plugins.casc.ConfigurationAsCode')[0]
+jobs:
+  - script: >
+      job('reload-jcasc-configuration') {
+          description('Job to reload Jenkins Configuration as Code (JCasC) configuration.')
+          steps {
+              dsl {
+                  scriptText('''
+                      job("reload-jcasc-configuration") {
+                          description("Reloads the JCasC configuration without restarting Jenkins.")
+                          steps {
+                              systemGroovyCommand('''
+                                  import jenkins.model.*
+                                  import io.jenkins.plugins.casc.ConfigurationAsCode
 
-                    if (jcasC) {
-                        jcasC.configure()  // Reloads the configuration
-                        echo "Jenkins Configuration as Code reloaded successfully."
-                    } else {
-                        error "JCasC plugin is not available on this Jenkins instance."
-                    }
-                }
-            }
-        }
-    }
-}
+                                  def jcasC = Jenkins.instance.getExtensionList(ConfigurationAsCode.class)[0]
+                                  if (jcasC) {
+                                      jcasC.configure()
+                                      println("JCasC configuration reloaded successfully.")
+                                  } else {
+                                      println("JCasC plugin is not available.")
+                                  }
+                              ''')
+                          }
+                      }
+                  ''')
+              }
+          }
+      }
