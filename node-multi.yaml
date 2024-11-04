@@ -1,0 +1,31 @@
+# Use a base image with dnf, like Fedora or CentOS Stream 8/9
+FROM centos:stream9
+
+# Enable Node.js modules
+RUN dnf module enable -y nodejs:16 && \
+    dnf module enable -y nodejs:18 && \
+    dnf module enable -y nodejs:20
+
+# Install Node.js 16 in a separate location
+RUN dnf install -y nodejs-16 && \
+    mv /usr/bin/node /usr/bin/node16 && \
+    mv /usr/bin/npm /usr/bin/npm16
+
+# Install Node.js 18 in a separate location
+RUN dnf install -y nodejs-18 && \
+    mv /usr/bin/node /usr/bin/node18 && \
+    mv /usr/bin/npm /usr/bin/npm18
+
+# Install Node.js 20 in a separate location
+RUN dnf install -y nodejs-20 && \
+    mv /usr/bin/node /usr/bin/node20 && \
+    mv /usr/bin/npm /usr/bin/npm20
+
+# Optionally, create symbolic links for a default version (e.g., Node.js 18)
+RUN ln -s /usr/bin/node18 /usr/bin/node && \
+    ln -s /usr/bin/npm18 /usr/bin/npm
+
+# Verify installations
+RUN node16 -v && npm16 -v && \
+    node18 -v && npm18 -v && \
+    node20 -v && npm20 -v
